@@ -1,0 +1,24 @@
+{
+  "name": "videomosaic",
+  "version": "0.0.1",
+  "description": "chop videofile into many files like mosaic",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/grzesebe/videomosaic.git"
+  },
+  "author": "Grzegorz Ebert",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/grzesebe/videomosaic/issues"
+  },
+  "homepage": "https://github.com/grzesebe/videomosaic#readme",
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.0.17",
+    "@ffprobe-installer/ffprobe": "^1.0.10",
+    "fluent-ffmpeg": "^2.1.2"
+  }
+}
