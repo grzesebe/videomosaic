@@ -19,6 +19,8 @@
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.0.17",
     "@ffprobe-installer/ffprobe": "^1.0.10",
-    "fluent-ffmpeg": "^2.1.2"
+    "clui": "^0.3.6",
+    "fluent-ffmpeg": "^2.1.2",
+    "minimist": "^1.2.0"
   }
 }

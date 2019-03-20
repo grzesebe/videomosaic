@@ -3,51 +3,61 @@ const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const ffprobePath = require('@ffprobe-installer/ffprobe').path;
 const ffmpeg = require('fluent-ffmpeg');
 const { performance } = require('perf_hooks');
+var argv = require('minimist')(process.argv.slice(2));
+
 
 ffmpeg.setFfprobePath(ffprobePath);
 ffmpeg.setFfmpegPath(ffmpegPath);
-
+ 
 
 
 var getFile = new Promise((resolve, reject) => {
     var file = {
-        path: process.argv[2]
+        path: argv._[0],
+        rows: argv.r,
+        columns: argv.c,
+        outputSize: argv.w+"x"+argv.h,
     }
-    console.log("File Path: "+file.path)
+    file.name = file.path.replace(/^.*[\\\/]/, '')
+    file.numberOfPieces = file.columns * file.rows;
+
     if(file.path === undefined){
         throw "you must specify file to chop"
     }
     ffmpeg.ffprobe(file.path, (err, metadata) => {
+        if(err){
+            throw(err)
+        }
         file.width = (metadata.streams[0].width)
         file.height = (metadata.streams[0].height)
-        
+        file.frames = (metadata.streams[0].nb_frames)
         resolve(file)
     });
 })
 
 getFile.then((file) => {
-    console.log("test: "+file)
     file.piece = {
-        width: 320,
-        height: 180
+        width: Math.floor(file.width/file.columns),
+        height: Math.floor(file.height/file.rows)
     }
-    file.usableHeight  = file.height - (file.height%file.piece.height);
-    file.usableWidth  = file.width - (file.width%file.piece.width);
-    file.numberOfPieces = (file.usableHeight/file.height)*(file.usableWidth/file.width)
-    console.log("usable height: "+file.usableHeight+", usable width: "+file.usableWidth)
     file.piece.getPosition = (count) => {
-        const flatY = count*file.piece.width;
-        const row = Math.floor(flatY/file.usableWidth);
-        console.log("row: "+row)
-        var x = flatY - row*file.usableWidth;
-        var y = row*file.piece.height;
-        if(y+file.piece.height>file.usableHeight){
+        const row = Math.floor(count/file.width)+1;
+        var col = (count) - (row - 1)*file.columns;
+        var x = (col - 1) * file.piece.width
+        var y = (row - 1) * file.piece.height;
+        var lett = String.fromCharCode(96 + row).toUpperCase();
+        var code = lett+col
+        if(y+file.piece.height>file.height || x+file.piece.width>file.width){
             return null
         }
-        return {"x" : x, "y" : y}
+        return {"x" : x, "y" : y, "code": code}
     }
     file.t0 = performance.now();
-    startPiece(0, file)
+
+
+    
+
+    startPiece(1, file)
 })
 
 
@@ -58,15 +68,6 @@ getFile.then((file) => {
 
 
 
-
-
-    // const mkdirSync = function (dirPath) {
-    //     try {
-    //         fs.mkdirSync(dirPath)
-    //     } catch (err) {
-    //         if (err.code !== 'EEXIST') throw err
-    //     }
-    // }
 
 
 
@@ -77,7 +78,7 @@ startPiece = function(count, file){
     piece = file.piece
     if(!piece.getPosition(count)){
         file.t1 = performance.now()
-        console.log("finished, work time:  "+msToTime(file.t1 - file.t0))
+        console.log("\nfinished "+(count-1)+" pieces, work time:  "+msToTime(file.t1 - file.t0))
         return("koniec")
     }else{
         this.position = piece.getPosition(count);
@@ -86,16 +87,19 @@ startPiece = function(count, file){
     var t1
     var meta
     onProgress = (progress) => {
-        // console.log('piece: ' + (count+1) + ", frames: " + progress.frames);
-        process.stdout.write('piece: ' + (count+1) + "/"+(file.numberOfPieces+1)+", frames: " + progress.frames+", position: "+this.position.x+", "+this.position.y+"\r");
+        var prog = progress.frames/file.frames;
+        file.progress = (count-1+prog)/file.numberOfPieces
+        file.timePast = performance.now() - file.t0
+        file.timeLeft = msToTime((file.timePast) * (1 - file.progress)/file.progress)
+        process.stdout.write(" Processing: "+position.code + ', piece: ' + (count) + "/"+(file.numberOfPieces)+", progress: " + (prog*100).toFixed(0) +"%, position: "+this.position.x+", "+this.position.y+", estimated time left: "+file.timeLeft+"\r");
     }
     onError = (err, stdout, stderr) => {
-        console.log('Cannot process video: ' + err.message);
+        throw('Cannot process video: ' + err.message);
     }
     onEnd = () => {
         this.t1 = performance.now()
 
-        console.log('Finished processing piece: '+count+', time: '+msToTime(this.t1 - this.t0)+", position: "+this.position.x+", "+this.position.y)
+        console.log('Finished processing piece: '+position.code+', time: '+msToTime(this.t1 - this.t0)+", position: "+this.position.x+", "+this.position.y+"\t\t")
         startPiece(count+1, file)
     }
     onStart = () => {
@@ -103,7 +107,13 @@ startPiece = function(count, file){
     }
     
     var timemark = null;
-    // mkdirSync("")
+
+
+   let dir = './output/' + position.code
+
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir);
+    }
     ffmpeg()
         .on('end', onEnd)
         .on('start', onStart)
@@ -119,8 +129,9 @@ startPiece = function(count, file){
                 y: this.position.y
             }
         }])
+        .size(file.outputSize)
         .fps(24)
-        .output('./output/'+(count+1)+'.mp4')
+        .output(dir+'/'+file.name)
         // .noAudio()
         .run();
 }
@@ -141,6 +152,3 @@ function msToTime(duration) {
   
     return hours + ":" + minutes + ":" + seconds + "." + milliseconds;
   }
-// startPiece(0)
-
-//   var file = new File(start())
