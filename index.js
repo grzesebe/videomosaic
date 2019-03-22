@@ -97,7 +97,7 @@ startPiece = function (count, file) {
         var prog = progress.frames / file.frames;
         file.progress = (count - 1 + prog) / file.numberOfPieces
         file.timePast = performance.now() - file.t0
-        file.timeLeft = msToTime((file.timePast) * (1 - file.progress) / file.progress) - file.timePast
+        file.timeLeft = msToTime(((file.timePast) * (1 - file.progress) / file.progress) - file.timePast)
         process.stdout.write(" Processing: " + position.code + ', piece: ' + (count) + "/" + (file.numberOfPieces) + ", progress: " + (prog * 100).toFixed(0) + "%, position: " + this.position.x + "x" + this.position.y + ", estimated time left: " + file.timeLeft + "\r");
     }
     onError = (err, stdout, stderr) => {
