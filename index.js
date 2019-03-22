@@ -8,6 +8,13 @@ const {
 ffmpeg.setFfprobePath(ffprobePath);
 ffmpeg.setFfmpegPath(ffmpegPath);
 
+/*
+* TODO: learn about references and use it for file handler in piece class 
+
+*/
+
+
+
 class File {
     constructor(path, rows, columns, outputSize, callback=()=>{}) {
         if (path === undefined) {
@@ -62,7 +69,7 @@ class Piece {
 
         var onProgress = (progress) => {
             var prog = progress.frames / this.file.frames;
-            this.file.progress = (count - 1 + prog) / this.file.numberOfPieces
+            this.file.progress = (this.count - 1 + prog) / this.file.numberOfPieces
             this.file.timePast = performance.now() - this.file.t0
             this.file.timeLeft = msToTime((this.file.timePast) * (1 - this.file.progress) / this.file.progress)
             process.stdout.write(" Processing: " + position.code + ', piece: ' + (count) + "/" + (this.file.numberOfPieces) + ", progress: " + (prog * 100).toFixed(0) + "%, position: " + this.x + "x" + this.y + ", estimated time left: " + this.file.timeLeft + "\r");
