@@ -16,7 +16,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 
 class File {
-    constructor(path, rows, columns, outputSize, callback=()=>{}) {
+    constructor(path, rows, columns, outputSize, callback) {
         if (path === undefined) {
             throw "you must specify file to chop"
         }
@@ -24,8 +24,11 @@ class File {
         this.rows = rows;
         this.columns = columns;
         this.outputSize = outputSize;
+        this.numberOfPieces = columns * rows;
         this.name = path.replace(/^.*[\\\/]/, '');
         this.t0 = performance.now();
+        this.piecesInProgress = [];
+        this.countFinished = 0;
         ffmpeg.ffprobe(this.path, (err, metadata) => {
             if (err) {
                 throw (err)
@@ -35,12 +38,18 @@ class File {
             this.pieceW = Math.floor(this.width / this.columns)
             this.pieceH = Math.floor(this.height / this.rows)
             this.frames = (metadata.streams[0].nb_frames)
-            callback()
+            callback ? callback() : null;
         });
     }
+    processPiece(count){
+        this.piecesInProgress[count] = new Piece(this, count, (piece) =>{
+            piece.process()
+        })
+    }
+
 }
 class Piece {
-    constructor(file, count, callback=()=>{}) {
+    constructor(file, count, callback) {
         this.file = file
         this.count = count
         const row = Math.floor(count / file.width) + 1;
@@ -55,31 +64,26 @@ class Piece {
         this.x = x;
         this.y = y;
         this.code = code;
-        console.log(this)
-        callback()
+        callback ? callback(this) : null
     }
-    process(callback) {
-        // if (!piece.getPosition(count)) {
-        //     file.t1 = performance.now()
-        //     console.log("\nfinished " + (count - 1) + " pieces, work time:  " + msToTime(file.t1 - file.t0))
-        //     return ("koniec")
-        // } else {
-        //     this.position = piece.getPosition(count);
-        // }
+    process(onProgress, callback) {
+        
 
-        var onProgress = (progress) => {
-            var prog = progress.frames / this.file.frames;
-            this.file.progress = (this.count - 1 + prog) / this.file.numberOfPieces
-            this.file.timePast = performance.now() - this.file.t0
-            this.file.timeLeft = msToTime((this.file.timePast) * (1 - this.file.progress) / this.file.progress)
-            process.stdout.write(" Processing: " + position.code + ', piece: ' + (count) + "/" + (this.file.numberOfPieces) + ", progress: " + (prog * 100).toFixed(0) + "%, position: " + this.x + "x" + this.y + ", estimated time left: " + this.file.timeLeft + "\r");
+        var whileProgres = (progress) => {
+            var progress = progress.frames / this.file.frames;
+            onProgress ? onProgress(prog) : null;
+            // this.file.progress = (this.count - 1 + prog) / this.file.numberOfPieces
+            // this.file.timePast = performance.now() - this.file.t0
+            // this.file.timeLeft = msToTime((this.file.timePast) * (1 - this.file.progress) / this.file.progress)
+
+            // process.stdout.write(" Processing: " + this.code + ', piece: ' + (this.count) + "/" + (this.file.numberOfPieces) + ", progress: " + (prog * 100).toFixed(0) + "%, position: " + this.x + "x" + this.y + ", estimated time left: " + this.file.timeLeft + "\r");
         }
         var onError = (err, stdout, stderr) => {
             throw ('Cannot process video: ' + err.message);
         }
         var onEnd = () => {
             this.t1 = performance.now()
-            callback(this.t0 - this.t1)
+            callback ? callback(this.t0 - this.t1) : null
         }
         var onStart = () => {
             this.t0 = performance.now();
@@ -95,7 +99,7 @@ class Piece {
         ffmpeg()
             .on('end', onEnd)
             .on('start', onStart)
-            .on('progress', onProgress)
+            .on('progress', whileProgres)
             .on('error', onError)
             .input(this.file.path)
             .videoFilters([{
@@ -118,9 +122,7 @@ class Piece {
 var argv = require('minimist')(process.argv.slice(2));
 
 var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
-    var piece = new Piece(file,1, () => {
-    })
-    piece.process()
+    file.processPiece(1)
 })
 
 
@@ -265,15 +267,15 @@ var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
 
 
 
-// function msToTime(duration) {
-//     var milliseconds = parseInt((duration % 1000) / 100),
-//         seconds = Math.floor((duration / 1000) % 60),
-//         minutes = Math.floor((duration / (1000 * 60)) % 60),
-//         hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+function msToTime(duration) {
+    var milliseconds = parseInt((duration % 1000) / 100),
+        seconds = Math.floor((duration / 1000) % 60),
+        minutes = Math.floor((duration / (1000 * 60)) % 60),
+        hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
 
-//     hours = (hours < 10) ? "0" + hours : hours;
-//     minutes = (minutes < 10) ? "0" + minutes : minutes;
-//     seconds = (seconds < 10) ? "0" + seconds : seconds;
+    hours = (hours < 10) ? "0" + hours : hours;
+    minutes = (minutes < 10) ? "0" + minutes : minutes;
+    seconds = (seconds < 10) ? "0" + seconds : seconds;
 
-//     return hours + ":" + minutes + ":" + seconds + "." + milliseconds;
-// }
+    return hours + ":" + minutes + ":" + seconds + "." + milliseconds;
+}
