@@ -3,6 +3,7 @@ const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const ffprobePath = require('@ffprobe-installer/ffprobe').path;
 const ffmpeg = require('fluent-ffmpeg');
 const {performance} = require('perf_hooks');
+var path = require('path');
 
 var argv = require('minimist')(process.argv.slice(2));
 
@@ -19,7 +20,8 @@ var getFile = new Promise((resolve, reject) => {
         columns: argv.c,
         outputSize: argv.w + "x" + argv.h,
     }
-    file.name = file.path.replace(/^.*[\\\/]/, '')
+    
+    file.name = path.basename(file.path, "."+file.path.split('.').pop())
     file.numberOfPieces = file.columns * file.rows;
 
     if (file.path === undefined) {
@@ -134,9 +136,10 @@ startPiece = function (count, file) {
                 y: this.position.y
             }
         }])
+        .videoCodec('libx264')
         .size(file.outputSize)
         .fps(24)
-        .output(dir + '/' + file.name)
+        .output(dir + '/' + file.name + ".mp4")
         // .noAudio()
         .run();
 }
