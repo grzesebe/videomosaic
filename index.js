@@ -141,7 +141,7 @@ var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
         });
         process.stdout.write(" Processing: " + pieces + " finished: " + file.countFinished + "/" + file.piecesToProcess + "\r");
     }, 500)
-    file.processPieces(1, 2, () => {
+    file.processPieces(1, null, () => {
         clearInterval(int)
         console.log("finished, TIME: "+msToTime(performance.now() - file.t0))
     })
