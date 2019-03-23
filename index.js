@@ -9,7 +9,7 @@ ffmpeg.setFfprobePath(ffprobePath);
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 /*
-* TODO: learn about references and use it for file handler in piece class 
+* TODO: centralized status
 
 */
 
@@ -24,7 +24,8 @@ class File {
         this.rows = rows;
         this.columns = columns;
         this.outputSize = outputSize;
-        this.numberOfPieces = columns * rows;
+        this.maxPieces = columns * rows;
+        this.piecesToProcess = 0;
         this.name = path.replace(/^.*[\\\/]/, '');
         this.t0 = performance.now();
         this.piecesInProgress = [];
@@ -41,25 +42,38 @@ class File {
             callback ? callback() : null;
         });
     }
-    processPiece(count){
-        this.piecesInProgress[count] = new Piece(this, count, (piece) =>{
-            piece.process()
+    processPieces(start, end, callback) {
+        this.piecesToProcess = !end ? file.maxPieces : end
+        if (start > this.piecesToProcess) {
+            callback ? callback() : null
+            return "end"
+        }
+        var cb = (piece) => {
+            this.processPieces(start + 1, end, callback)
+            this.countFinished++;
+
+            delete this.piecesInProgress[piece.count];
+
+        }
+        this.piecesInProgress[start] = new Piece(this, start, (piece) => {
+            piece.process(null, cb)
         })
     }
+    // processAll
 
 }
 class Piece {
     constructor(file, count, callback) {
         this.file = file
         this.count = count
-        const row = Math.floor(count / file.width) + 1;
+        const row = Math.floor(count * file.pieceW / file.width) + 1;
         var col = (count) - (row - 1) * file.columns;
         var x = (col - 1) * file.pieceW;
         var y = (row - 1) * file.pieceH;
         var lett = String.fromCharCode(96 + row).toUpperCase();
         var code = lett + col
         if (y + file.pieceH > file.height || x + file.pieceW > file.width) {
-            return null
+            throw "piece out of range"
         }
         this.x = x;
         this.y = y;
@@ -67,23 +81,21 @@ class Piece {
         callback ? callback(this) : null
     }
     process(onProgress, callback) {
-        
+
 
         var whileProgres = (progress) => {
-            var progress = progress.frames / this.file.frames;
-            onProgress ? onProgress(prog) : null;
-            // this.file.progress = (this.count - 1 + prog) / this.file.numberOfPieces
-            // this.file.timePast = performance.now() - this.file.t0
-            // this.file.timeLeft = msToTime((this.file.timePast) * (1 - this.file.progress) / this.file.progress)
+            this.progress = progress.frames / this.file.frames;
+            onProgress ? onProgress(this) : null;
 
-            // process.stdout.write(" Processing: " + this.code + ', piece: ' + (this.count) + "/" + (this.file.numberOfPieces) + ", progress: " + (prog * 100).toFixed(0) + "%, position: " + this.x + "x" + this.y + ", estimated time left: " + this.file.timeLeft + "\r");
+
         }
         var onError = (err, stdout, stderr) => {
             throw ('Cannot process video: ' + err.message);
         }
         var onEnd = () => {
             this.t1 = performance.now()
-            callback ? callback(this.t0 - this.t1) : null
+            console.log("finished: "+this.code+", time: "+msToTime(this.t1-this.t0)+"     ")
+            callback ? callback(this) : null
         }
         var onStart = () => {
             this.t0 = performance.now();
@@ -122,7 +134,17 @@ class Piece {
 var argv = require('minimist')(process.argv.slice(2));
 
 var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
-    file.processPiece(1)
+    var int = setInterval(() => {
+        var pieces = "";
+        file.piecesInProgress.forEach(element => {
+            pieces += element.code + ", "
+        });
+        process.stdout.write(" Processing: " + pieces + " finished: " + file.countFinished + "/" + file.piecesToProcess + "\r");
+    }, 500)
+    file.processPieces(1, 2, () => {
+        clearInterval(int)
+        console.log("finished, TIME: "+msToTime(performance.now() - file.t0))
+    })
 })
 
 
