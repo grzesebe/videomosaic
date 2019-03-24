@@ -70,7 +70,7 @@ class Piece {
         var col = (count) - (row - 1) * file.columns;
         var x = (col - 1) * file.pieceW;
         var y = (row - 1) * file.pieceH;
-        var lett = String.fromCharCode(96 + row).toUpperCase();
+        var lett = String.fromCharCode(96 + row).toLowerCase();
         var code = lett + col
         if (y + file.pieceH > file.height || x + file.pieceW > file.width) {
             throw "piece out of range"
