@@ -146,9 +146,13 @@ var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
         var timePassed = performance.now() - file.t0
         var timeLeft = Math.round(timePassed / progress - timePassed)
         var percentage = Math.floor(progress * 100)+"%"
-        process.stdout.write(" Processing: " + pieces + " finished: " + file.countFinished + "/" + file.piecesToProcess + ", progress: "+percentage+", time left: "+msToTime(timeLeft)+"             \r");
+        process.stdout.write(" FILE: "+file.path+", Processing: " + pieces + " finished: " + file.countFinished + "/" + file.piecesToProcess + ", progress: "+percentage+", Time passed: "+msToTime(timePassed)+", time left: "+msToTime(timeLeft)+"             \r");
     }, 500)
+    if (!fs.existsSync("./output")) {
+        fs.mkdirSync("./output");
+    }
     file.processPieces(1, null, () => {
+        
         clearInterval(int)
         console.log("finished, TIME: "+msToTime(performance.now() - file.t0))
     })
@@ -157,9 +161,7 @@ var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
 
 
 function msToTime(duration) {
-    if (!fs.existsSync("./output")) {
-        fs.mkdirSync("./output");
-    }
+    
     var milliseconds = parseInt((duration % 1000) / 100),
         seconds = Math.floor((duration / 1000) % 60),
         minutes = Math.floor((duration / (1000 * 60)) % 60),
