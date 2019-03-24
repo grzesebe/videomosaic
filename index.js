@@ -148,7 +148,7 @@ var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
         var percentage = Math.floor(progress * 100)+"%"
         process.stdout.write(" Processing: " + pieces + " finished: " + file.countFinished + "/" + file.piecesToProcess + ", progress: "+percentage+", time left: "+msToTime(timeLeft)+"             \r");
     }, 500)
-    file.processPieces(1, 2, () => {
+    file.processPieces(1, null, () => {
         clearInterval(int)
         console.log("finished, TIME: "+msToTime(performance.now() - file.t0))
     })
@@ -157,8 +157,8 @@ var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
 
 
 function msToTime(duration) {
-    if (!fs.existsSync(./output)) {
-        fs.mkdirSync(./output);
+    if (!fs.existsSync("./output")) {
+        fs.mkdirSync("./output");
     }
     var milliseconds = parseInt((duration % 1000) / 100),
         seconds = Math.floor((duration / 1000) % 60),
