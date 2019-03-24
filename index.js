@@ -49,11 +49,11 @@ class File {
             return "end"
         }
         var cb = (piece) => {
-            this.processPieces(start + 1, end, callback)
+            setTimeout(() => {
+                this.processPieces(start + 1, end, callback)
+            },0)
             this.countFinished++;
-
             delete this.piecesInProgress[piece.count];
-
         }
         this.piecesInProgress[start] = new Piece(this, start, (piece) => {
             piece.process(null, cb)
@@ -66,7 +66,7 @@ class Piece {
     constructor(file, count, callback) {
         this.file = file
         this.count = count
-        const row = Math.floor(count * file.pieceW / file.width) + 1;
+        var row = Math.floor((count-1) / file.columns)+1
         var col = (count) - (row - 1) * file.columns;
         var x = (col - 1) * file.pieceW;
         var y = (row - 1) * file.pieceH;
@@ -94,7 +94,7 @@ class Piece {
         }
         var onEnd = () => {
             this.t1 = performance.now()
-            console.log("finished: "+this.code+", time: "+msToTime(this.t1-this.t0)+"     ")
+            console.log("finished: "+this.code+", time: "+msToTime(this.t1-this.t0)+"         ")
             callback ? callback(this) : null
         }
         var onStart = () => {
