@@ -9,7 +9,7 @@ ffmpeg.setFfprobePath(ffprobePath);
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 /*
-* TODO: centralized status
+* TODO: centralized status, calculating time to finish job.
 
 */
 
@@ -43,6 +43,7 @@ class File {
         });
     }
     processPieces(start, end, callback) {
+        
         this.piecesToProcess = !end ? file.maxPieces : end
         if (start > this.piecesToProcess) {
             callback ? callback() : null
@@ -93,7 +94,8 @@ class Piece {
         }
         var onEnd = () => {
             this.t1 = performance.now()
-            console.log("finished: "+this.code+", time: "+msToTime(this.t1-this.t0)+"         ")
+            //pls do smth with output
+            console.log("finished: "+this.code+", time: "+msToTime(this.t1-this.t0)+"                       ")
             callback ? callback(this) : null
         }
         var onStart = () => {
@@ -135,12 +137,18 @@ var argv = require('minimist')(process.argv.slice(2));
 var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
     var int = setInterval(() => {
         var pieces = "";
+        var processedPieces = file.countFinished;
         file.piecesInProgress.forEach(element => {
+            processedPieces += element.progress;
             pieces += element.code + ", "
         });
-        process.stdout.write(" Processing: " + pieces + " finished: " + file.countFinished + "/" + file.piecesToProcess + "\r");
+        var progress = processedPieces / file.piecesToProcess
+        var timePassed = performance.now() - file.t0
+        var timeLeft = Math.round(timePassed / progress - timePassed)
+        var percentage = Math.floor(progress * 100)+"%"
+        process.stdout.write(" Processing: " + pieces + " finished: " + file.countFinished + "/" + file.piecesToProcess + ", progress: "+percentage+", time left: "+msToTime(timeLeft)+"             \r");
     }, 500)
-    file.processPieces(1, null, () => {
+    file.processPieces(1, 2, () => {
         clearInterval(int)
         console.log("finished, TIME: "+msToTime(performance.now() - file.t0))
     })
@@ -149,6 +157,9 @@ var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
 
 
 function msToTime(duration) {
+    if (!fs.existsSync(./output)) {
+        fs.mkdirSync(./output);
+    }
     var milliseconds = parseInt((duration % 1000) / 100),
         seconds = Math.floor((duration / 1000) % 60),
         minutes = Math.floor((duration / (1000 * 60)) % 60),
