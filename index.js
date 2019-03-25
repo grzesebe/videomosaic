@@ -2,6 +2,7 @@ const fs = require('fs')
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const ffprobePath = require('@ffprobe-installer/ffprobe').path;
 const ffmpeg = require('fluent-ffmpeg');
+var path = require('path');
 const {
     performance
 } = require('perf_hooks');
@@ -16,17 +17,17 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 
 class File {
-    constructor(path, rows, columns, outputSize, callback) {
+    constructor(filePath, rows, columns, outputSize, callback) {
         if (path === undefined) {
             throw "you must specify file to chop"
         }
-        this.path = path;
+        this.path = filePath;
         this.rows = rows;
         this.columns = columns;
         this.outputSize = outputSize;
         this.maxPieces = columns * rows;
         this.piecesToProcess = 0;
-        this.name = path.replace(/^.*[\\\/]/, '');
+        this.name = path.basename(filePath, "."+filePath.split('.').pop())
         this.t0 = performance.now();
         this.piecesInProgress = [];
         this.countFinished = 0;
@@ -95,7 +96,7 @@ class Piece {
         var onEnd = () => {
             this.t1 = performance.now()
             //pls do smth with output
-            console.log("finished: "+this.code+", time: "+msToTime(this.t1-this.t0)+"                       ")
+            //console.log("finished: "+this.code+", time: "+msToTime(this.t1-this.t0)+"                       ")
             callback ? callback(this) : null
         }
         var onStart = () => {
@@ -126,7 +127,8 @@ class Piece {
             }])
             .size(this.file.outputSize)
             .fps(24)
-            .output(dir + '/' + this.file.name)
+            .videoCodec('libx264')
+            .output(dir + '/' + this.file.name + ".mp4")
             // .noAudio()
             .run();
     }
@@ -146,7 +148,7 @@ var file = new File(argv._[0], argv.r, argv.c, argv.w + "x" + argv.h, () => {
         var timePassed = performance.now() - file.t0
         var timeLeft = Math.round(timePassed / progress - timePassed)
         var percentage = Math.floor(progress * 100)+"%"
-        process.stdout.write(" FILE: "+file.path+", Processing: " + pieces + " finished: " + file.countFinished + "/" + file.piecesToProcess + ", progress: "+percentage+", Time passed: "+msToTime(timePassed)+", time left: "+msToTime(timeLeft)+"             \r");
+        process.stdout.write('\033[2J'+" FILE: "+file.name+", Processing: " + pieces + " finished: " + file.countFinished + "/" + file.piecesToProcess + ", progress: "+percentage+", Time passed: "+msToTime(timePassed)+", time left: "+msToTime(timeLeft)+"             \r");
     }, 500)
     if (!fs.existsSync("./output")) {
         fs.mkdirSync("./output");
