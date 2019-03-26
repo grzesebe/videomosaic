@@ -128,6 +128,7 @@ class Piece {
             .size(this.file.outputSize)
             .fps(24)
             .videoCodec('libx264')
+            .videoBitrate('1000k', true)
             .output(dir + '/' + this.file.name + ".mp4")
             // .noAudio()
             .run();
