@@ -127,13 +127,17 @@ class Piece {
             }])
             .size(this.file.outputSize)
             .fps(24)
-            .videoCodec('libx264')
+            .videoCodec('libopenh264')
             .videoBitrate('500k', true)
             .output(dir + '/' + this.file.name + ".mp4")
             .noAudio()
             .run();
     }
 }
+ffmpeg.getAvailableCodecs(function(err, codecs) {
+    console.log('Available codecs:');
+    console.dir(codecs);
+  });
 
 var argv = require('minimist')(process.argv.slice(2));
 
