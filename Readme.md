@@ -8,5 +8,10 @@ usage:
 npm start -r {rows} -c {columns} -w {output width} -h {output height} {input file}
 ```
 
+>I needed this app for single project and created it on demand.
 
->Tool still in development stage
+>I don't have plan to improve this app but who knows...
+
+>Feel free to do with this whatever You want.
+
+>Tool still in development stage.
